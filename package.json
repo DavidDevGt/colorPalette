@@ -1,0 +1,29 @@
+{
+  "scripts": {
+    "dev": "tsc -w & vite",
+    "build": "rimraf dist && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/chroma-js": "^3.1.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^4.9.4",
+    "vite": "^4.0.0"
+  },
+  "keywords": [
+    "color",
+    "palette",
+    "generator",
+    "design",
+    "web",
+    "component"
+  ],
+  "name": "colorpalette",
+  "version": "1.0.0",
+  "main": "dist/main.js",
+  "description": "Generador interactivo de paletas de colores",
+  "author": "DavidDevGt",
+  "dependencies": {
+    "chroma-js": "^3.1.2"
+  }
+}
