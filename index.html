@@ -4,40 +4,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Paletas de Colores</title>
+    <title>Generador de Paletas de Colores - SaaS</title>
     <style>
-        body {
+        /* Estilos Globales */
+        * {
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f7f7f7;
+            box-sizing: border-box;
         }
 
-        main {
-            padding: 2rem;
-            max-width: 1200px;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f0f;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 5rem 2rem;
+            max-width: 900px;
             margin: 0 auto;
         }
 
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #b0b0b0;
+            margin: 1rem 0;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #4a6cf7;
+            color: white;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .cta-button:hover {
+            background: #3451c6;
+        }
+
+        /* Contenedor del Producto */
+        .product-container {
+            display: flex;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        color-palette {
+            width: 100%;
+            max-width: 900px;
+            padding: 2rem;
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Características */
+        .features {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 2rem;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .feature {
+            flex: 1;
+            min-width: 250px;
+            background: #181818;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .feature h3 {
+            font-size: 1.5rem;
+            color: #4a6cf7;
+        }
+
+        /* Footer */
         footer {
             text-align: center;
             padding: 2rem;
-            color: #666;
             font-size: 0.9rem;
+            color: #888;
         }
     </style>
 </head>
 
 <body>
-    <main>
-        <color-palette></color-palette>
-    </main>
 
+    <!-- Hero Section -->
+    <header class="hero">
+        <h1>Generador de Paletas de Colores</h1>
+        <p>Crea combinaciones de colores perfectas para tus proyectos de diseño y desarrollo.</p>
+        <a href="#product" class="cta-button">Generar Paleta</a>
+    </header>
+
+    <!-- Producto -->
+    <section id="product" class="product-container">
+        <color-palette></color-palette>
+    </section>
+
+    <!-- Características -->
+    <section class="features">
+        <div class="feature">
+            <h3>🎨 Colores Únicos</h3>
+            <p>Genera paletas con armonía cromática perfecta.</p>
+        </div>
+        <div class="feature">
+            <h3>⚡ Rápido y Fácil</h3>
+            <p>Obtén combinaciones instantáneas con un solo clic.</p>
+        </div>
+        <div class="feature">
+            <h3>📋 Copia y Exporta</h3>
+            <p>Guarda tus paletas en JSON o copia los códigos HEX.</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
     <footer>
-        <p>Generador de Paletas de Colores © 2025</p>
+        <p>Generador de Paletas de Colores © 2025 - Todos los derechos reservados</p>
     </footer>
 
     <script type="module" src="/src/main.ts"></script>
+
 </body>
 
 </html>

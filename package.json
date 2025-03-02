@@ -2,7 +2,8 @@
   "scripts": {
     "dev": "tsc -w & vite",
     "build": "rimraf dist && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:build": "npm run build && npm run preview"
   },
   "devDependencies": {
     "@types/chroma-js": "^3.1.1",

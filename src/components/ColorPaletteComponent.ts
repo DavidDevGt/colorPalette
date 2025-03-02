@@ -1,381 +1,338 @@
 import { ColorPaletteService } from '../services/colorPaletteService';
 import { copyToClipboard } from '../utils/clipboard';
 import { ColorInfo } from '../types/color';
+import './ColorBlockComponent';
+import { styles } from './colorPaletteStyles';
+
 export class ColorPaletteComponent extends HTMLElement {
-    static get observedAttributes() {
-        return ['palette-size'];
-    }
-    private colorService!: ColorPaletteService;
-    private paletteSize: number = 6;
-    private elements: {
-        paletteContainer: HTMLElement | null;
-        generateButton: HTMLElement | null;
-        exportButton: HTMLElement | null;
-        copyNotice: HTMLElement | null;
-        paletteSizeInput: HTMLInputElement | null;
-    } = {
-            paletteSizeInput: null,
-            paletteContainer: null,
-            generateButton: null,
-            exportButton: null,
-            copyNotice: null,
-        };
-    private static readonly LOCKED_CLASS = 'locked';
-    private static readonly UNLOCKED_CLASS = 'unlocked';
-    private static readonly ACTIVE_CLASS = 'active';
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-    }
-    connectedCallback() {
-        this.initAttributes();
-        this.colorService = new ColorPaletteService(this.paletteSize);
-        this.render();
-        this.cacheElements();
-        this.setupEventListeners();
-    }
-    disconnectedCallback() {
-        this.removeEventListeners();
-    }
-    attributeChangedCallback(name: string, oldValue: string, newValue: string) {
-        if (oldValue === newValue) return;
-        if (name === 'palette-size') {
-            this.paletteSize = parseInt(newValue, 10) || 5;
-            if (this.colorService) {
-                this.colorService.updatePaletteSize(this.paletteSize);
-                this.renderColorBlocks();
-            }
-        }
-    }
-    private initAttributes() {
-        const size = this.getAttribute('palette-size');
-        if (size) {
-            this.paletteSize = parseInt(size, 10) || 5;
-        }
-    }
-    private render() {
-        if (!this.shadowRoot) return;
-        this.shadowRoot.innerHTML = `
-      <style>
-        ${this.getStyles()}
-      </style>
-      <div class="header">
-        <h1>Generador de Paletas de Colores</h1>
-        <p>Genera combinaciones de colores armoniosas para tus proyectos</p>
-      </div>
-      <div class="controls">
+  static get observedAttributes() {
+    return ['palette-size'];
+  }
 
-        <button class="generate-btn">Generar Nueva Paleta [Espacio]</button>
-        <button class="export-btn">Exportar Paleta</button>
+  private colorService!: ColorPaletteService;
+  private paletteSize: number = 7;
+  private hasGeneratedColors: boolean = false; // Contador de primera interacción
+  private elements: {
+    paletteContainer: HTMLElement | null;
+    generateButton: HTMLElement | null;
+    exportContainer: HTMLElement | null;
+    copyNotice: HTMLElement | null;
+    exportBtn: HTMLButtonElement | null;
+  } = {
+      paletteContainer: null,
+      generateButton: null,
+      exportContainer: null,
+      copyNotice: null,
+      exportBtn: null,
+    };
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.initAttributes();
+    this.colorService = new ColorPaletteService(this.paletteSize);
+    this.render();
+    this.cacheElements();
+    this.setupEventListeners();
+    this.updateExportButtonState();
+  }
+
+  disconnectedCallback() {
+    this.removeEventListeners();
+  }
+
+  attributeChangedCallback(name: string, oldValue: string, newValue: string) {
+    if (oldValue === newValue) return;
+    if (name === 'palette-size') {
+      this.paletteSize = parseInt(newValue, 10) || 5;
+      if (this.colorService) {
+        this.colorService.updatePaletteSize(this.paletteSize);
+        this.renderColorBlocks();
+        this.updateExportButtonState();
+      }
+    }
+  }
+
+  private initAttributes() {
+    const size = this.getAttribute('palette-size');
+    if (size) {
+      this.paletteSize = parseInt(size, 10) || 5;
+    }
+  }
+
+  private render() {
+    if (!this.shadowRoot) return;
+    this.shadowRoot.innerHTML = `
+      <style>${styles}</style>
+      <div class="container">
+        <header class="header">
+          <h1>🎨 Generador de Paletas de Colores</h1>
+          <p>Crea combinaciones de colores únicas para tus proyectos de diseño y desarrollo.</p>
+        </header>
+
+        <div class="controls">
+          <button class="generate-btn">🔄 Generar Colores</button>
+          <div class="export-container">
+            <button class="export-btn" disabled>📥 Exportar Paleta</button>
+            <div class="export-dropdown">
+              <button class="export-option" data-format="less">Exportar a LESS</button>
+              <button class="export-option" data-format="scss">Exportar a SCSS</button>
+              <button class="export-option" data-format="css">Exportar a CSS</button>
+              <button class="export-option" data-format="tailwind">Exportar a Tailwind Config</button>
+              <button class="export-option" data-format="json">Exportar a JSON</button>
+              <button class="export-option" data-format="csv">Exportar a CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="palette-container"></div>
+        <div class="copy-notice">✅ Color copiado</div>
       </div>
-      <div class="palette-container"></div>
-      <div class="copy-notice">Copiado al portapapeles</div>
     `;
-        this.renderColorBlocks();
-    }
-    private cacheElements() {
-        if (!this.shadowRoot) return;
-        this.elements.paletteSizeInput = this.shadowRoot.querySelector('.palette-size-input');
-        this.elements.paletteContainer = this.shadowRoot.querySelector('.palette-container');
-        this.elements.generateButton = this.shadowRoot.querySelector('.generate-btn');
-        this.elements.exportButton = this.shadowRoot.querySelector('.export-btn');
-        this.elements.copyNotice = this.shadowRoot.querySelector('.copy-notice');
-    }
-    private renderColorBlocks() {
-        const { paletteContainer } = this.elements;
-        if (!paletteContainer) return;
-        paletteContainer.innerHTML = '';
-        this.colorService.colors.forEach((color, index) => {
-            paletteContainer.appendChild(this.createColorBlock(color, index));
-        });
-    }
-    private createColorBlock(color: ColorInfo, index: number): HTMLElement {
-        const colorBlock = document.createElement('div');
-        colorBlock.className = `color-block ${color.locked ? ColorPaletteComponent.LOCKED_CLASS : ColorPaletteComponent.UNLOCKED_CLASS}`;
-    
-        const colorPreview = document.createElement('div');
-        colorPreview.className = 'color-preview';
-        colorPreview.style.backgroundColor = color.hex;
-    
-        const lockIcon = document.createElement('span');
-        lockIcon.className = 'lock-icon';
-        
-        // SVG para el candado cerrado
-        const lockedSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>`;
-        
-        // SVG para el candado abierto
-        const unlockedSvg = `<svg 
-                              xmlns="http://www.w3.org/2000/svg" 
-                              width="20" 
-                              height="20" 
-                              viewBox="0 0 24 24" 
-                              fill="none" 
-                              stroke="currentColor" 
-                              stroke-width="2" 
-                              stroke-linecap="round" 
-                              stroke-linejoin="round">
-                              
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    this.renderColorBlocks();
+  }
 
-                              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-                            </svg>
-                            `;
-        
-        lockIcon.innerHTML = color.locked ? lockedSvg : unlockedSvg;
-        
-        colorPreview.appendChild(lockIcon);
-        lockIcon.addEventListener('click', () => this.toggleLock(index));
-    
-        const colorInfo = document.createElement('div');
-        colorInfo.className = 'color-info';
-    
-        const formats = [
-            { class: 'hex-code', value: color.hex },
-            { class: 'rgb-code', value: color.rgb },
-            { class: 'hsl-code', value: color.hsl }
-        ];
-    
-        formats.forEach(format => {
-            const element = document.createElement('div');
-            element.className = format.class;
-            element.textContent = format.value;
-            element.addEventListener('click', () => this.copyColor(format.value));
-            colorInfo.appendChild(element);
-        });
-    
-        colorBlock.appendChild(colorPreview);
-        colorBlock.appendChild(colorInfo);
-    
-        return colorBlock;
-    }
-    
-    private setupEventListeners() {
-        this.elements.generateButton?.addEventListener('click', this.generateNewPalette.bind(this));
-        this.elements.exportButton?.addEventListener('click', this.exportPalette.bind(this));
-        this.handleKeyDown = this.handleKeyDown.bind(this);
-        document.addEventListener('keydown', this.handleKeyDown);
-        this.elements.paletteSizeInput?.addEventListener('change', (event) => {
-            const newSize = parseInt((event.target as HTMLInputElement).value, 10);
-            this.updatePaletteSize(newSize);
-        });
-    }
-    private updatePaletteSize(newSize: number) {
-        this.paletteSize = newSize;
-        this.colorService.updatePaletteSize(newSize);
-        this.renderColorBlocks();
-    }
-    
-    private removeEventListeners() {
-        document.removeEventListener('keydown', this.handleKeyDown);
-    }
-    private handleKeyDown(e: KeyboardEvent) {
-        if (e.key === ' ' || e.code === 'Space') {
-            e.preventDefault();
-            this.generateNewPalette();
+  private cacheElements() {
+    if (!this.shadowRoot) return;
+    this.elements.paletteContainer = this.shadowRoot.querySelector('.palette-container');
+    this.elements.generateButton = this.shadowRoot.querySelector('.generate-btn');
+    this.elements.exportContainer = this.shadowRoot.querySelector('.export-container');
+    this.elements.copyNotice = this.shadowRoot.querySelector('.copy-notice');
+    this.elements.exportBtn = this.shadowRoot.querySelector('.export-btn') as HTMLButtonElement;
+  }
+
+  private showModal(message: string) {
+    if (!this.shadowRoot) return;
+
+    const existingModal = this.shadowRoot.querySelector('.modal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.classList.add('modal');
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <p>${message}</p>
+            <button class="close-modal">OK</button>
+        </div>
+    `;
+
+    const modalStyle = document.createElement('style');
+    modalStyle.textContent = `
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
         }
-    }
-    private generateNewPalette() {
-        this.colorService.generatePalette();
-        this.renderColorBlocks();
-    }
-    private toggleLock(index: number) {
-        this.colorService.lockColor(index);
-        this.renderColorBlocks();
-    }
-    private async copyColor(colorCode: string) {
-        try {
-            await copyToClipboard(colorCode);
-            this.showCopyNotice();
-        } catch (error) {
-            console.error('Error al copiar al portapapeles:', error);
+        .modal-content {
+            background: #1E293B;
+            color: #E2E8F0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-width: 300px;
         }
+        .modal-content button {
+            background: #4F46E5;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 1rem;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        .modal-content button:hover {
+            background: #4338CA;
+        }
+    `;
+
+    this.shadowRoot.appendChild(modalStyle);
+    this.shadowRoot.appendChild(modal);
+
+    modal.querySelector('.close-modal')?.addEventListener('click', () => {
+      modal.remove();
+    });
+  }
+
+  private renderColorBlocks() {
+    const { paletteContainer } = this.elements;
+    if (!paletteContainer) return;
+    paletteContainer.innerHTML = '';
+
+    if (!this.hasGeneratedColors) {
+      paletteContainer.innerHTML = `<p>No hay colores generados. Presiona "Generar Colores" para crear una paleta.</p>`;
+    } else {
+      this.colorService.colors.forEach((color: ColorInfo, index: number) => {
+        const colorBlock = document.createElement('color-block');
+        (colorBlock as any).color = color;
+        (colorBlock as any).index = index;
+
+        colorBlock.addEventListener('toggle-lock', ((e: CustomEvent) => {
+          this.toggleLock(e.detail.index);
+        }) as EventListener);
+        colorBlock.addEventListener('copy-color', ((e: CustomEvent) => {
+          this.copyColor(e.detail.colorCode);
+        }) as EventListener);
+
+        paletteContainer.appendChild(colorBlock);
+      });
     }
-    private showCopyNotice() {
-        const { copyNotice } = this.elements;
-        if (!copyNotice) return;
-        copyNotice.classList.add(ColorPaletteComponent.ACTIVE_CLASS);
-        setTimeout(() => {
-            copyNotice.classList.remove(ColorPaletteComponent.ACTIVE_CLASS);
-        }, 2000);
+    this.updateExportButtonState();
+  }
+
+  private updateExportButtonState() {
+    const exportBtn = this.elements.exportBtn;
+    if (exportBtn) {
+      if (!this.hasGeneratedColors || this.colorService.colors.length === 0) {
+        exportBtn.setAttribute('disabled', 'true');
+        exportBtn.title = "Genera una paleta antes de exportar";
+      } else {
+        exportBtn.removeAttribute('disabled');
+        exportBtn.title = "";
+      }
     }
-    private exportPalette() {
+  }
+
+  private setupEventListeners() {
+    this.elements.generateButton?.addEventListener('click', this.generateNewPalette.bind(this));
+
+    const exportOptions = this.shadowRoot?.querySelectorAll('.export-option');
+    exportOptions?.forEach((option) => {
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const format = (option as HTMLElement).getAttribute('data-format');
+        if (format) {
+          this.exportPaletteAs(format);
+        }
+      });
+    });
+
+    document.addEventListener('keydown', this.handleKeyDown.bind(this));
+  }
+
+  private removeEventListeners() {
+    document.removeEventListener('keydown', this.handleKeyDown);
+  }
+
+  private handleKeyDown(e: KeyboardEvent) {
+    if (e.key === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      this.generateNewPalette();
+    }
+  }
+
+  private generateNewPalette() {
+    this.hasGeneratedColors = true; // Primera interacción activada
+    this.colorService.generatePalette();
+    this.renderColorBlocks();
+  }
+
+  private toggleLock(index: number) {
+    this.colorService.lockColor(index);
+    this.renderColorBlocks();
+  }
+
+  private async copyColor(colorCode: string) {
+    try {
+      await copyToClipboard(colorCode);
+      this.showCopyNotice();
+    } catch (error) {
+      console.error('Error al copiar al portapapeles:', error);
+    }
+  }
+
+  private showCopyNotice() {
+    const { copyNotice } = this.elements;
+    if (!copyNotice) return;
+    copyNotice.classList.add('active');
+    setTimeout(() => {
+      copyNotice.classList.remove('active');
+    }, 2000);
+  }
+
+  private exportPaletteAs(format: string) {
+    if (!this.hasGeneratedColors) {
+      this.showModal("Debes generar colores antes de exportar.");
+      return;
+    }
+
+    const colors = this.colorService.colors;
+    if (!colors || colors.length === 0) {
+      console.warn("No hay colores generados.");
+      return;
+    }
+
+    let content = "";
+    let filename = "";
+
+    switch (format) {
+      case "json":
         const paletteData = {
-            colors: this.colorService.colors.map(color => ({
-                hex: color.hex,
-                rgb: color.rgb,
-                hsl: color.hsl
+            colors: this.colorService.colors.map(({ hex, rgb, hsl }) => ({
+                hex,
+                rgb,
+                hsl
             }))
         };
-        const dataStr = JSON.stringify(paletteData, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-        const exportLink = document.createElement('a');
-        exportLink.setAttribute('href', dataUri);
-        exportLink.setAttribute('download', 'color-palette.json');
-        document.body.appendChild(exportLink);
-        exportLink.click();
-        document.body.removeChild(exportLink);
+        content = JSON.stringify(paletteData, null, 2);
+        filename = "color-palette.json";
+        break;    
+      case "css":
+        content = `:root {\n`;
+        colors.forEach((color, i) => {
+          content += `  --color-${i + 1}: ${color.hex};\n`;
+        });
+        content += `}`;
+        filename = "color-palette.css";
+        break;
+      case "scss":
+        content = colors.map((color, i) => `$color-${i + 1}: ${color.hex};`).join("\n");
+        filename = "color-palette.scss";
+        break;
+      case "less":
+        content = colors.map((color, i) => `@color-${i + 1}: ${color.hex};`).join("\n");
+        filename = "color-palette.less";
+        break;
+      case "tailwind":
+        content = `module.exports = {\n  theme: {\n    extend: {\n      colors: {\n`;
+        colors.forEach((color, i) => {
+          const colorKey = `color${i + 1}`;
+          content += `        '${colorKey}': '${color.hex}',\n`;
+        });
+        content += `      }\n    }\n  }\n};`;
+        filename = "tailwind.config.js";
+        break;
+      case "csv":
+        content = "Index,Hex\n" + colors.map((color, i) => `${i + 1},${color.hex}`).join("\n");
+        filename = "color-palette.csv";
+        break;
+      default:
+        console.warn("Formato no soportado.");
+        return;
     }
-    private getStyles(): string {
-      
-        return `
-      :host {
-        display: block;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        max-width: 1200px;
-        margin: 0 auto;
-        --primary-color: #4a6cf7;
-        --primary-hover: #3451c6;
-        --text-color: #333;
-        --light-bg: #f5f5f5;
-        --shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      }
-      
-      .header {
-        text-align: center;
-        padding: 2rem 0;
-      }
-      
-      .palette-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin-bottom: 2rem;
-      }
-      
-      .color-block {
-        flex: 1;
-        min-width: 150px;
-        height: 200px;
-        display: flex;
-        flex-direction: column;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: var(--shadow);
-        transition: transform 0.2s ease;
-      }
-      
-      .color-block:hover {
-        transform: translateY(-5px);
-      }
-      
-      .color-preview {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        position: relative;
-      }
-      
-      .lock-icon {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        width: 30px;
-        height: 30px;
-        background-color: rgba(255, 255, 255, 0.7);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-      }
-      
-      .lock-icon:hover {
-        background-color: rgba(255, 255, 255, 0.9);
-      }
-      
-      .lock-icon svg {
-        width: 16px;
-        height: 16px;
-        stroke: #333;
-      }
-      
-      .color-info {
-        background-color: white;
-        padding: 1rem;
-        text-align: center;
-      }
-      .hex-code {
-        font-weight: bold;
-        font-family: monospace;
-        font-size: 1rem;
-        margin-bottom: 0.5rem;
-        cursor: pointer;
-      }
-      
-      .rgb-code, .hsl-code {
-        font-size: 0.8rem;
-        color: #666;
-        font-family: monospace;
-        cursor: pointer;
-      }
-      
-      .controls {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        margin-bottom: 2rem;
-      }
-      
-      button {
-        padding: 0.75rem 1.5rem;
-        background-color: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-      }
-      
-      button:hover {
-        background-color: var(--primary-hover);
-      }
-      
-      .copy-notice {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #333;
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        font-size: 0.9rem;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        z-index: 1000;
-      }
-      
-      .copy-notice.active {
-        opacity: 1;
-      }
-      
-      @media (max-width: 768px) {
-        .palette-container {
-          flex-direction: column;
-        }
-        
-        .color-block {
-          min-width: 100%;
-        }
-        
-        .controls {
-          flex-direction: column;
-          align-items: center;
-        }
-        
-        button {
-          width: 100%;
-          max-width: 300px;
-        }
-      }
-    `;
-    }
+
+    const dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+    const exportLink = document.createElement('a');
+    exportLink.setAttribute('href', dataUri);
+    exportLink.setAttribute('download', filename);
+    document.body.appendChild(exportLink);
+    exportLink.click();
+    document.body.removeChild(exportLink);
+  }
+
 }
+
 customElements.define('color-palette', ColorPaletteComponent);

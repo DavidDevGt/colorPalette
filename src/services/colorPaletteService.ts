@@ -11,13 +11,13 @@ export interface ColorPalette {
     colors: Color[];
     generatePalette: () => void;
     lockColor: (index: number) => void;
-    updatePaletteSize: (newSize: number) => void; // Añadir a la interfaz
+    updatePaletteSize: (newSize: number) => void;
 }
 
 export class ColorPaletteService implements ColorPalette {
     colors: Color[] = [];
 
-    constructor(private size: number = 5) {
+    constructor(private size: number = 6) {
         this.generatePalette();
     }
 
