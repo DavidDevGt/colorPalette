@@ -1,3 +1,4 @@
+import checker from 'vite-plugin-checker';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -7,6 +8,14 @@ export default defineConfig({
     open: true,
     cors: true
   },
+
+  plugins: [
+    // checker({
+    //   typescript: {
+    //     tsconfigPath: './tsconfig.json'
+    //   }
+    // })
+  ],
   
   build: {
     outDir: 'dist',

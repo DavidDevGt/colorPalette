@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "dev": "tsc -w & vite",
+    "dev": "vite",
     "build": "rimraf dist && vite build",
     "preview": "vite preview",
     "preview:build": "npm run build && npm run preview"
@@ -10,7 +10,8 @@
     "@types/three": "^0.174.0",
     "rimraf": "^6.0.1",
     "typescript": "^4.9.4",
-    "vite": "^4.0.0"
+    "vite": "^4.0.0",
+    "vite-plugin-checker": "^0.9.0"
   },
   "keywords": [
     "color",
@@ -20,6 +21,7 @@
     "web",
     "component"
   ],
+  "type": "module",
   "name": "colorpalette",
   "version": "1.0.0",
   "main": "dist/main.js",

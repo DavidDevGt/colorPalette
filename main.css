@@ -93,6 +93,7 @@ body {
     align-items: center;
     padding: 4rem 2rem;
     margin-top: 3rem;
+    min-height: 100vh;
 }
 
 color-palette {

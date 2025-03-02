@@ -10,20 +10,22 @@ export class ColorPaletteComponent extends HTMLElement {
   }
 
   private colorService!: ColorPaletteService;
-  private paletteSize: number = 7;
-  private hasGeneratedColors: boolean = false; // Contador de primera interacción
+  private paletteSize: number = 6;
+  private hasGeneratedColors: boolean = false;
   private elements: {
     paletteContainer: HTMLElement | null;
     generateButton: HTMLElement | null;
     exportContainer: HTMLElement | null;
     copyNotice: HTMLElement | null;
     exportBtn: HTMLButtonElement | null;
+    previewContainer: HTMLElement | null;
   } = {
     paletteContainer: null,
     generateButton: null,
     exportContainer: null,
     copyNotice: null,
     exportBtn: null,
+    previewContainer: null,
   };
 
   constructor() {
@@ -84,6 +86,10 @@ export class ColorPaletteComponent extends HTMLElement {
               <button class="export-option" data-format="json">JSON</button>
               <button class="export-option" data-format="csv">CSV</button>
             </div>
+            <div class="preview-container">
+              <h3>Vista previa</h3>
+              <pre class="preview-content"></pre>
+            </div>
           </div>
         </div>
   
@@ -102,6 +108,7 @@ export class ColorPaletteComponent extends HTMLElement {
     this.elements.exportContainer = this.shadowRoot.querySelector('.export-container');
     this.elements.copyNotice = this.shadowRoot.querySelector('.copy-notice');
     this.elements.exportBtn = this.shadowRoot.querySelector('.export-btn') as HTMLButtonElement;
+    this.elements.previewContainer = this.shadowRoot.querySelector('.preview-container');
   }
 
   private showModal(message: string) {
@@ -258,6 +265,23 @@ export class ColorPaletteComponent extends HTMLElement {
           this.exportPaletteAs(format);
         }
       });
+      
+      // Añadimos evento de hover para mostrar el preview
+      option.addEventListener('mouseenter', (e) => {
+        const format = (option as HTMLElement).getAttribute('data-format');
+        if (format) {
+          this.showFormatPreview(format);
+        }
+      });
+      
+      option.addEventListener('mouseleave', () => {
+        this.hidePreview();
+      });
+    });
+
+    // Ocultar el preview cuando el mouse sale del dropdown
+    this.elements.exportContainer?.addEventListener('mouseleave', () => {
+      this.hidePreview();
     });
 
     document.addEventListener('keydown', this.handleKeyDown.bind(this));
@@ -301,6 +325,84 @@ export class ColorPaletteComponent extends HTMLElement {
     setTimeout(() => {
       copyNotice.classList.remove('active');
     }, 2000);
+  }
+
+  private showFormatPreview(format: string) {
+    if (!this.hasGeneratedColors || !this.elements.previewContainer) return;
+    
+    // Obtener muestra del contenido (limitado a 3 colores para el preview)
+    const previewContent = this.getPreviewContent(format);
+    
+    // Actualizar el contenido del preview
+    const previewElem = this.elements.previewContainer.querySelector('.preview-content');
+    if (previewElem) {
+      previewElem.textContent = previewContent;
+    }
+    
+    // Mostrar el contenedor del preview
+    this.elements.previewContainer.classList.add('visible');
+  }
+  
+  private hidePreview() {
+    if (this.elements.previewContainer) {
+      this.elements.previewContainer.classList.remove('visible');
+    }
+  }
+  
+  private getPreviewContent(format: string): string {
+    // Mostrar solo los primeros 3 colores o menos para el preview
+    const colors = this.colorService.colors;
+    const previewColors = colors.slice(0, 3);
+    
+    if (!previewColors || previewColors.length === 0) {
+      return "No hay colores para previsualizar";
+    }
+    
+    let content = "";
+    
+    switch (format) {
+      case "json":
+        const paletteData = {
+          colors: previewColors.map(({ hex, rgb, hsl }) => ({
+            hex,
+            rgb,
+            hsl
+          }))
+        };
+        content = JSON.stringify(paletteData, null, 2);
+        break;
+      case "css":
+        content = `:root {\n`;
+        previewColors.forEach((color, i) => {
+          content += `  --color-${i + 1}: ${color.hex};\n`;
+        });
+        content += `  /* ... */\n}`;
+        break;
+      case "scss":
+        content = previewColors.map((color, i) => `$color-${i + 1}: ${color.hex};`).join("\n");
+        if (colors.length > 3) content += "\n// ...";
+        break;
+      case "less":
+        content = previewColors.map((color, i) => `@color-${i + 1}: ${color.hex};`).join("\n");
+        if (colors.length > 3) content += "\n// ...";
+        break;
+      case "tailwind":
+        content = `module.exports = {\n  theme: {\n    extend: {\n      colors: {\n`;
+        previewColors.forEach((color, i) => {
+          const colorKey = `color${i + 1}`;
+          content += `        '${colorKey}': '${color.hex}',\n`;
+        });
+        content += `        // ...\n      }\n    }\n  }\n};`;
+        break;
+      case "csv":
+        content = "Index,Hex\n" + previewColors.map((color, i) => `${i + 1},${color.hex}`).join("\n");
+        if (colors.length > 3) content += "\n...";
+        break;
+      default:
+        content = "Formato no soportado.";
+    }
+    
+    return content;
   }
 
   private exportPaletteAs(format: string) {
