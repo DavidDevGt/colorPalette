@@ -2,7 +2,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Poppins', sans-serif;
 }
 
 body {
@@ -16,7 +16,6 @@ body {
     position: relative;
     text-align: center;
     padding: 6rem 2rem;
-    max-width: 1200px;
     margin: auto;
     min-height: 100vh;
     display: flex;
@@ -24,6 +23,16 @@ body {
     justify-content: center;
     align-items: center;
     overflow: hidden;
+}
+
+.no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    /* Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* Internet Explorer/Edge */
 }
 
 .threejs-bg {

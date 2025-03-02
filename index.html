@@ -4,42 +4,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Paletas de Colores - SaaS</title>
+    <title>ChromaNova: Generador de Paletas</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="main.css">
 </head>
 
 <body>
-
-    <!-- Hero Section -->
-    <header class="hero">
-        <h1>Generador de Paletas de Colores</h1>
+    <header class="hero no-select">
+        <h1>ChromaNova</h1>
         <p>Crea combinaciones de colores perfectas para tus proyectos de diseño y desarrollo.</p>
         <a href="#product" class="cta-button">Generar Paleta</a>
     </header>
-
-    <section id="product" class="product-container">
+    <section id="product" class="product-container no-select">
         <color-palette></color-palette>
     </section>
-
-    <section class="features">
+    <section class="features no-select">
         <div class="feature">
             <h3>🎨 Colores Únicos</h3>
-            <p>Genera paletas con armonía cromática perfecta.</p>
+            <p>Genera paletas con una armonía de colores perfecta.</p>
         </div>
         <div class="feature">
             <h3>⚡ Rápido y Fácil</h3>
-            <p>Obtén combinaciones instantáneas con un solo clic.</p>
+            <p>Obtén combinaciones instantáneas con un solo click.</p>
         </div>
         <div class="feature">
             <h3>📋 Copia y Exporta</h3>
-            <p>Guarda tus paletas en JSON, SCSS, LESS y más.</p>
+            <p>Guarda tus paletas de colores en JSON, CSS, SCSS y otros formatos.</p>
         </div>
     </section>
-
     <a href="#product" class="floating-cta">🎨 Generar</a>
-
     <script type="module" src="/src/main.ts"></script>
-
 </body>
 
 </html>

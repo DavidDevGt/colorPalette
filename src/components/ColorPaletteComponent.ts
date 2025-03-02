@@ -19,12 +19,12 @@ export class ColorPaletteComponent extends HTMLElement {
     copyNotice: HTMLElement | null;
     exportBtn: HTMLButtonElement | null;
   } = {
-      paletteContainer: null,
-      generateButton: null,
-      exportContainer: null,
-      copyNotice: null,
-      exportBtn: null,
-    };
+    paletteContainer: null,
+    generateButton: null,
+    exportContainer: null,
+    copyNotice: null,
+    exportBtn: null,
+  };
 
   constructor() {
     super();
@@ -62,38 +62,38 @@ export class ColorPaletteComponent extends HTMLElement {
       this.paletteSize = parseInt(size, 10) || 5;
     }
   }
-
   private render() {
     if (!this.shadowRoot) return;
     this.shadowRoot.innerHTML = `
       <style>${styles}</style>
       <div class="container">
         <header class="header">
-          <h1>🎨 Generador de Paletas de Colores</h1>
-          <p>Crea combinaciones de colores únicas para tus proyectos de diseño y desarrollo.</p>
+          <h1>ChromaNova</h1>
+          <p>Aqui puedes generar paletas de colores para tus proyectos</p>
         </header>
-
+  
         <div class="controls">
           <button class="generate-btn">🔄 Generar Colores</button>
           <div class="export-container">
-            <button class="export-btn" disabled>📥 Exportar Paleta</button>
+            <button class="export-btn" disabled>📥 Exportar</button>
             <div class="export-dropdown">
-              <button class="export-option" data-format="less">Exportar a LESS</button>
-              <button class="export-option" data-format="scss">Exportar a SCSS</button>
-              <button class="export-option" data-format="css">Exportar a CSS</button>
-              <button class="export-option" data-format="tailwind">Exportar a Tailwind Config</button>
-              <button class="export-option" data-format="json">Exportar a JSON</button>
-              <button class="export-option" data-format="csv">Exportar a CSV</button>
+              <button class="export-option" data-format="less">LESS</button>
+              <button class="export-option" data-format="scss">SCSS</button>
+              <button class="export-option" data-format="css">CSS</button>
+              <button class="export-option" data-format="tailwind">Tailwind</button>
+              <button class="export-option" data-format="json">JSON</button>
+              <button class="export-option" data-format="csv">CSV</button>
             </div>
           </div>
         </div>
-
+  
         <div class="palette-container"></div>
         <div class="copy-notice">✅ Color copiado</div>
       </div>
     `;
     this.renderColorBlocks();
   }
+  
 
   private cacheElements() {
     if (!this.shadowRoot) return;
@@ -103,10 +103,7 @@ export class ColorPaletteComponent extends HTMLElement {
     this.elements.copyNotice = this.shadowRoot.querySelector('.copy-notice');
     this.elements.exportBtn = this.shadowRoot.querySelector('.export-btn') as HTMLButtonElement;
   }
-  /**
-   * Muestra un modal con un mensaje específico.
-   * @param {string} message - El mensaje a mostrar en el modal.
-   */
+
   private showModal(message: string) {
     const existingModal = document.querySelector('.global-modal');
     if (existingModal) existingModal.remove();
@@ -119,7 +116,7 @@ export class ColorPaletteComponent extends HTMLElement {
           <p>${message}</p>
           <button class="close-modal">OK</button>
       </div>
-  `;
+    `;
 
     const modalStyle = document.createElement('style');
     modalStyle.textContent = `
@@ -158,7 +155,7 @@ export class ColorPaletteComponent extends HTMLElement {
       .modal-content button:hover {
           background: #4338CA;
       }
-  `;
+    `;
 
     document.head.appendChild(modalStyle);
     document.body.appendChild(modal);
@@ -180,7 +177,38 @@ export class ColorPaletteComponent extends HTMLElement {
         const colorBlock = document.createElement('color-block');
         (colorBlock as any).color = color;
         (colorBlock as any).index = index;
+        // Hacer el bloque draggable
+        colorBlock.setAttribute('draggable', 'true');
 
+        // Evento dragstart: guardamos el índice en el dataTransfer y agregamos una clase visual
+        colorBlock.addEventListener('dragstart', (e: DragEvent) => {
+          e.dataTransfer?.setData('text/plain', index.toString());
+          colorBlock.classList.add('dragging');
+        });
+
+        // Evento dragend: quitar la clase visual
+        colorBlock.addEventListener('dragend', (e: DragEvent) => {
+          colorBlock.classList.remove('dragging');
+        });
+
+        // Permitir el drop sobre cada bloque
+        colorBlock.addEventListener('dragover', (e: DragEvent) => {
+          e.preventDefault();
+          e.dataTransfer!.dropEffect = 'move';
+        });
+
+        // Evento drop: obtener el índice de origen y reordenar la paleta
+        colorBlock.addEventListener('drop', (e: DragEvent) => {
+          e.preventDefault();
+          const draggedIndexStr = e.dataTransfer?.getData('text/plain');
+          if (draggedIndexStr === undefined || draggedIndexStr === '') return;
+          const draggedIndex = parseInt(draggedIndexStr, 10);
+          const targetIndex = index;
+          if (draggedIndex === targetIndex) return;
+          this.reorderColors(draggedIndex, targetIndex);
+        });
+
+        // Eventos para las acciones propias del color-block
         colorBlock.addEventListener('toggle-lock', ((e: CustomEvent) => {
           this.toggleLock(e.detail.index);
         }) as EventListener);
@@ -192,6 +220,17 @@ export class ColorPaletteComponent extends HTMLElement {
       });
     }
     this.updateExportButtonState();
+  }
+
+  /**
+   * Reordena la paleta moviendo el color desde "from" hasta "to".
+   * Se actualiza el arreglo de colores y se vuelve a renderizar.
+   */
+  private reorderColors(from: number, to: number) {
+    const colors = this.colorService.colors;
+    const movedColor = colors.splice(from, 1)[0];
+    colors.splice(to, 0, movedColor);
+    this.renderColorBlocks();
   }
 
   private updateExportButtonState() {
@@ -236,7 +275,7 @@ export class ColorPaletteComponent extends HTMLElement {
   }
 
   private generateNewPalette() {
-    this.hasGeneratedColors = true; // Primera interacción activada
+    this.hasGeneratedColors = true;
     this.colorService.generatePalette();
     this.renderColorBlocks();
   }
@@ -333,7 +372,6 @@ export class ColorPaletteComponent extends HTMLElement {
     exportLink.click();
     document.body.removeChild(exportLink);
   }
-
 }
 
 customElements.define('color-palette', ColorPaletteComponent);
