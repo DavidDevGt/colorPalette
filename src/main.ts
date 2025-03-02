@@ -70,30 +70,29 @@ function initBackground() {
         new THREE.Color(0x10B981),
         new THREE.Color(0xF59E0B)
     ];
-
     const particleVertexShader = `
-        attribute float size;
-        attribute vec3 color;
-        varying vec3 vColor;
-        
-        void main() {
-            vColor = color;
-            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = size * (300.0 / -mvPosition.z);
-            gl_Position = projectionMatrix * mvPosition;
-        }
-    `;
+    attribute float size;
+    attribute vec3 color;
+    varying vec3 vParticleColor;
+    
+    void main() {
+        vParticleColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = max(1.0, size * (300.0 / -mvPosition.z));
+        gl_Position = projectionMatrix * mvPosition;
+    }
+`;
 
     const particleFragmentShader = `
-        varying vec3 vColor;
-        
-        void main() {
-            float dist = length(gl_PointCoord - vec2(0.5));
-            if (dist > 0.5) discard;
-            float strength = 1.0 - (dist * 2.0);
-            gl_FragColor = vec4(vColor, strength);
-        }
-    `;
+    varying vec3 vParticleColor;
+    
+    void main() {
+        float dist = length(gl_PointCoord - vec2(0.5));
+        float alpha = 1.0 - smoothstep(0.4, 0.5, dist);
+        if (alpha <= 0.0) discard;
+        gl_FragColor = vec4(vParticleColor, alpha);
+    }
+`;
 
     class ParticleExplosion implements Explosion {
         private particleCount: number;

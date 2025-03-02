@@ -25,6 +25,14 @@ body {
     overflow: hidden;
 }
 
+.hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: -1;
+}
+
 .no-select {
     user-select: none;
     -webkit-user-select: none;
@@ -41,7 +49,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
+    z-index: -2;
     pointer-events: none;
 }
 
@@ -98,7 +106,7 @@ color-palette {
 }
 
 color-palette:hover {
-    transform: translateY(-5px);
+    transform: translateY(-2px);
 }
 
 .features {
@@ -123,8 +131,8 @@ color-palette:hover {
 }
 
 .feature:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
 }
 
 .feature h3 {
