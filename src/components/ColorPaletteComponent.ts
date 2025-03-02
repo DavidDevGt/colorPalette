@@ -103,64 +103,65 @@ export class ColorPaletteComponent extends HTMLElement {
     this.elements.copyNotice = this.shadowRoot.querySelector('.copy-notice');
     this.elements.exportBtn = this.shadowRoot.querySelector('.export-btn') as HTMLButtonElement;
   }
-
+  /**
+   * Muestra un modal con un mensaje específico.
+   * @param {string} message - El mensaje a mostrar en el modal.
+   */
   private showModal(message: string) {
-    if (!this.shadowRoot) return;
-
-    const existingModal = this.shadowRoot.querySelector('.modal');
+    const existingModal = document.querySelector('.global-modal');
     if (existingModal) existingModal.remove();
 
     const modal = document.createElement('div');
-    modal.classList.add('modal');
+    modal.classList.add('global-modal');
 
     modal.innerHTML = `
-        <div class="modal-content">
-            <p>${message}</p>
-            <button class="close-modal">OK</button>
-        </div>
-    `;
+      <div class="modal-content">
+          <p>${message}</p>
+          <button class="close-modal">OK</button>
+      </div>
+  `;
 
     const modalStyle = document.createElement('style');
     modalStyle.textContent = `
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 5000;
-        }
-        .modal-content {
-            background: #1E293B;
-            color: #E2E8F0;
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            min-width: 300px;
-        }
-        .modal-content button {
-            background: #4F46E5;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 1rem;
-            font-size: 1rem;
-            font-weight: bold;
-        }
-        .modal-content button:hover {
-            background: #4338CA;
-        }
-    `;
+      .global-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 5000;
+      }
+      .modal-content {
+          background: #1E293B;
+          color: #E2E8F0;
+          padding: 1.5rem;
+          border-radius: 8px;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+          text-align: center;
+          min-width: 300px;
+      }
+      .modal-content button {
+          background: #4F46E5;
+          color: white;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 5px;
+          cursor: pointer;
+          margin-top: 1rem;
+          font-size: 1rem;
+          font-weight: bold;
+      }
+      .modal-content button:hover {
+          background: #4338CA;
+      }
+  `;
 
-    this.shadowRoot.appendChild(modalStyle);
-    this.shadowRoot.appendChild(modal);
+    document.head.appendChild(modalStyle);
+    document.body.appendChild(modal);
 
     modal.querySelector('.close-modal')?.addEventListener('click', () => {
       modal.remove();
@@ -281,15 +282,15 @@ export class ColorPaletteComponent extends HTMLElement {
     switch (format) {
       case "json":
         const paletteData = {
-            colors: this.colorService.colors.map(({ hex, rgb, hsl }) => ({
-                hex,
-                rgb,
-                hsl
-            }))
+          colors: this.colorService.colors.map(({ hex, rgb, hsl }) => ({
+            hex,
+            rgb,
+            hsl
+          }))
         };
         content = JSON.stringify(paletteData, null, 2);
         filename = "color-palette.json";
-        break;    
+        break;
       case "css":
         content = `:root {\n`;
         colors.forEach((color, i) => {

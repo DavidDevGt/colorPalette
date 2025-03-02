@@ -2,7 +2,7 @@ export const styles = `
 :host {
   display: block;
   font-family: 'Inter', sans-serif;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   background-color: #0F172A;
   color: #E2E8F0;
@@ -132,7 +132,6 @@ button:hover {
   height: 200px;
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
   overflow: hidden;
   box-shadow: var(--shadow);
   transition: transform 0.2s ease;
