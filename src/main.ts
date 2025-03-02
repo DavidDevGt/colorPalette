@@ -1,7 +1,8 @@
 import './components/ColorPaletteComponent';
 import * as THREE from 'three';
-import ThreeJSConfig from './ThreeJSConfig';
-
+import ThreeJSConfig, { ThreeJSOptions } from './ThreeJSConfig';
+import { initializeGlobalParticleAttributes, createExplosionAttributes } from './utils/particles';
+import { getMousePosition } from './utils/threeUtils';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Color Palette Generator initialized');
@@ -9,11 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Setup ThreeJS
- * @param heroSection => Element
- * @returns => ThreeJSConfig
+ * Configura y crea la escena Three.js junto con la cámara, el renderizador y el canvas.
+ *
+ * Se pueden personalizar aspectos como el campo de visión, distancias de renderizado, color de fondo,
+ * antialiasing, pixel ratio y preferencia de potencia mediante el parámetro de opciones.
+ *
+ * @param {Element} heroSection - Elemento contenedor donde se insertará el canvas.
+ * @param {ThreeJSOptions} [options] - Opciones de configuración adicionales para la escena.
+ *
+ * @returns {ThreeJSConfig} Objeto que contiene la escena, la cámara, el renderizador y el canvas.
  */
-function createThreeJSConfig(heroSection: Element): ThreeJSConfig {
+function createThreeJSConfig(heroSection: Element, options?: ThreeJSOptions): ThreeJSConfig {
     const canvas = document.createElement('canvas');
     canvas.classList.add('threejs-bg');
     heroSection.appendChild(canvas);
@@ -21,18 +28,30 @@ function createThreeJSConfig(heroSection: Element): ThreeJSConfig {
     const width = heroSection.clientWidth;
     const height = heroSection.clientHeight;
 
+    const fieldOfView = options?.fieldOfView ?? 75;
+    const near = options?.near ?? 0.1;
+    const far = options?.far ?? 100;
+    const antialias = options?.antialias ?? true;
+    const powerPreference = options?.powerPreference ?? 'high-performance';
+    const pixelRatio = options?.pixelRatio ?? Math.min(window.devicePixelRatio, 2);
+
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
+
+    if (options?.backgroundColor !== undefined) {
+        scene.background = new THREE.Color(options.backgroundColor);
+    }
+
+    const camera = new THREE.PerspectiveCamera(fieldOfView, width / height, near, far);
     camera.position.z = 5;
 
     const renderer = new THREE.WebGLRenderer({
         canvas,
         alpha: true,
-        antialias: true,
-        powerPreference: 'high-performance'
+        antialias,
+        powerPreference
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(pixelRatio);
 
     return { scene, camera, renderer, canvas };
 }
@@ -46,14 +65,22 @@ function initBackground() {
     const heroSection = document.querySelector('.hero');
     if (!heroSection) return;
 
-    const { scene, camera, renderer, canvas } = createThreeJSConfig(heroSection);
+    const { scene, camera, renderer, canvas } = createThreeJSConfig(heroSection, {
+        fieldOfView: 75,
+        near: 0.1,
+        far: 100,
+        antialias: true,
+        powerPreference: 'high-performance'
+    });
     const width = heroSection.clientWidth;
     const height = heroSection.clientHeight;
 
-    let mouseX = 0, mouseY = 0;
-    let targetX = 0, targetY = 0;
+    let mouseX = 0,
+        mouseY = 0;
+    let targetX = 0,
+        targetY = 0;
     let windowHalfX = width / 2;
-    let windowHalfY = height / 2
+    let windowHalfY = height / 2;
 
     const particlesCount = navigator.userAgent.match(/Mobile|Android|iPhone/i) ? 250 : 500;
     const geometry = new THREE.BufferGeometry();
@@ -81,7 +108,7 @@ function initBackground() {
         gl_PointSize = max(1.0, size * (300.0 / -mvPosition.z));
         gl_Position = projectionMatrix * mvPosition;
     }
-`;
+  `;
 
     const particleFragmentShader = `
     varying vec3 vParticleColor;
@@ -92,7 +119,7 @@ function initBackground() {
         if (alpha <= 0.0) discard;
         gl_FragColor = vec4(vParticleColor, alpha);
     }
-`;
+  `;
 
     class ParticleExplosion implements Explosion {
         private particleCount: number;
@@ -107,26 +134,11 @@ function initBackground() {
         constructor(position: THREE.Vector3, color: THREE.Color, particleCount = 50, decayRate = 0.02) {
             this.particleCount = particleCount;
             this.geometry = new THREE.BufferGeometry();
-            this.positions = new Float32Array(this.particleCount * 3);
-            this.velocities = new Float32Array(this.particleCount * 3);
+            const explosionAttributes = createExplosionAttributes(this.particleCount, position);
+            this.positions = explosionAttributes.positions;
+            this.velocities = explosionAttributes.velocities;
             this.life = 1.0;
             this.decayRate = decayRate;
-
-            for (let i = 0; i < this.particleCount; i++) {
-                const i3 = i * 3;
-
-                this.positions[i3] = position.x;
-                this.positions[i3 + 1] = position.y;
-                this.positions[i3 + 2] = position.z;
-
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                const speed = 0.05 + Math.random() * 0.1;
-
-                this.velocities[i3] = Math.sin(phi) * Math.cos(theta) * speed;
-                this.velocities[i3 + 1] = Math.sin(phi) * Math.sin(theta) * speed;
-                this.velocities[i3 + 2] = Math.cos(phi) * speed;
-            }
 
             this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
 
@@ -188,7 +200,6 @@ function initBackground() {
             return true;
         }
 
-        // Método para limpiar recursos
         dispose(): void {
             scene.remove(this.points);
             this.geometry.dispose();
@@ -198,35 +209,11 @@ function initBackground() {
 
     let explosions: Explosion[] = [];
 
-    initializeParticles();
-    function initializeParticles() {
-        for (let i = 0; i < particlesCount; i++) {
-            const i3 = i * 3;
-
-            const radius = Math.random() * 5;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-
-            positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
-            positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-            positions[i3 + 2] = radius * Math.cos(phi);
-
-            const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-            colors[i3] = color.r;
-            colors[i3 + 1] = color.g;
-            colors[i3 + 2] = color.b;
-
-            sizes[i] = Math.random() * 0.3 + 0.05;
-
-            mainVelocities[i3] = 0;
-            mainVelocities[i3 + 1] = 0;
-            mainVelocities[i3 + 2] = 0;
-        }
-
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    }
+    // Inicialización de las partículas globales utilizando la función auxiliar
+    initializeGlobalParticleAttributes(particlesCount, positions, colors, sizes, mainVelocities, colorPalette);
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
     const material = new THREE.ShaderMaterial({
         vertexShader: particleVertexShader,
@@ -243,19 +230,6 @@ function initBackground() {
     const rotationSpeed = 0.0003;
     const clock = new THREE.Clock();
 
-    function getMousePosition(event: MouseEvent): THREE.Vector3 {
-        const rect = canvas.getBoundingClientRect();
-        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-        const vector = new THREE.Vector3(x, y, 0.5);
-        vector.unproject(camera);
-
-        const dir = vector.sub(camera.position).normalize();
-        const distance = -camera.position.z / dir.z;
-        return camera.position.clone().add(dir.multiplyScalar(distance));
-    }
-
     function animate() {
         requestAnimationFrame(animate);
 
@@ -268,20 +242,19 @@ function initBackground() {
         points.rotation.y += (targetX - points.rotation.y) * movementSpeed;
         points.rotation.x += (targetY - points.rotation.x) * movementSpeed;
 
-        points.rotation.y += rotationSpeed * delta * 60; // Normalizado a 60fps
+        points.rotation.y += rotationSpeed * delta * 60; //60fps
 
         updateParticles(time, delta);
-        explosions = explosions.filter(explosion => explosion.update());
+        explosions = explosions.filter((explosion) => explosion.update());
 
         renderer.render(scene, camera);
     }
 
     function updateParticles(time: number, delta: number) {
-        const timeScale = delta * 60; // Normalizado a 60fps
+        const timeScale = delta * 60; // 60fps
 
         for (let i = 0; i < particlesCount; i++) {
             const i3 = i * 3;
-
             const factor = 0.5 * timeScale;
             positions[i3] += Math.sin(time * 0.7 + positions[i3 + 1]) * 0.01 * factor;
             positions[i3 + 1] += Math.cos(time * 0.8 + positions[i3]) * 0.01 * factor;
@@ -305,7 +278,7 @@ function initBackground() {
 
     heroSection.addEventListener('click', (event: Event) => {
         const mouseEvent = event as MouseEvent;
-        const clickPosition = getMousePosition(mouseEvent);
+        const clickPosition = getMousePosition(mouseEvent, canvas, camera);
         const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
 
         const particleCount = Math.floor(Math.random() * 30) + 50;
@@ -339,13 +312,16 @@ function initBackground() {
 
     heroSection.addEventListener('mousemove', handleMouseMove as EventListener);
 
-    heroSection.addEventListener('touchmove', ((event: Event) => {
-        const touchEvent = event as TouchEvent;
-        if (touchEvent.touches.length > 0) {
-            mouseX = touchEvent.touches[0].clientX;
-            mouseY = touchEvent.touches[0].clientY;
-        }
-    }) as EventListener);
+    heroSection.addEventListener(
+        'touchmove',
+        ((event: Event) => {
+            const touchEvent = event as TouchEvent;
+            if (touchEvent.touches.length > 0) {
+                mouseX = touchEvent.touches[0].clientX;
+                mouseY = touchEvent.touches[0].clientY;
+            }
+        }) as EventListener
+    );
 
     let resizeTimeout: number | null = null;
     const handleResize = () => {
@@ -377,7 +353,7 @@ function initBackground() {
         material.dispose();
         renderer.dispose();
 
-        explosions.forEach(explosion => {
+        explosions.forEach((explosion) => {
             explosion.dispose();
         });
 
